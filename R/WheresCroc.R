@@ -1,3 +1,13 @@
+
+
+hiddenMarkov=function(){
+  
+}
+
+findShortestPath=function() {
+  
+}
+
 ourWC=function(moveInfo,readings,positions,edges,probs) {
   
   return(moveInfo)
