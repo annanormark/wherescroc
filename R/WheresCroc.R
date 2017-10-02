@@ -1,6 +1,26 @@
+
+
+hiddenMarkov=function(){
+  
+}
+
+findShortestPath=function() {
+  
+}
+
+ourWC=function(moveInfo,readings,positions,edges,probs) {
+  
+  return(moveInfo)
+}
+
 #' @export
 randomWC=function(moveInfo,readings,positions,edges,probs) {
   moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
+  print(moveInfo)
+  print(readings)
+  print(positions)
+  print(edges)
+  print(probs)
   return(moveInfo)
 }
 
@@ -15,7 +35,7 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
     warning ("Invalid move. Search ('0') specified.")
     mv1=0
   }
-  if (mv1!=0) {
+  if (mv1!=0) { 
     options=getOptions(mv1,edges)
   }
   print("Move 2 options (plus 0 for search):")
@@ -113,7 +133,7 @@ testWC = function(moveInfo,readings,positions,edges,probs){
 #' @param pause The pause period between moves. Ignore this.
 #' @return A string describing the outcome of the game.
 #' @export
-runWheresCroc=function(makeMoves,showCroc=F,pause=1) {
+runWheresCroc=function(makeMoves=randomWC,showCroc=T,pause=1) {
   positions=sample(1:40,4) # Croc, BP1, BP2, Player
   points=getPoints()
   edges=getEdges()
