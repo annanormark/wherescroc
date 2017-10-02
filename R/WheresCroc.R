@@ -30,6 +30,50 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
   return(moveInfo)
 }
 
+
+turist_eaten = function(turist_point){
+  if(turist_point < 0){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+
+
+generate_e_matrix =function(){
+  
+  
+  
+}
+
+prob_edge_movement = function(point,edges){
+  options=getOptions(point,edges)
+  div_arg = length(options)
+  prob = 1/div_arg
+  return(prob)
+}
+
+
+testWC = function(moveInfo,readings,positions,edges,probs){
+  options=getOptions(7,edges)
+  prob_edge = prob_edge_movement(7,edges)
+  print(prob_edge)
+  print("Move 1 options (plus 0 for search):")
+  print(options)  
+  
+  print(readings)
+  points = getPoints()
+  print(points)
+  
+  edges=getEdges()
+  print(edges)
+  probs=getProbs()
+  print(probs)
+  
+  
+}
+
 #' Run Where's Croc
 #' 
 #' Runs the Where's Croc game. In this game, you are a ranger in an Australian national park. 
