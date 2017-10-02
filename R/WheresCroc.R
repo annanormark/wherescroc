@@ -1,13 +1,15 @@
 
-
+#Anna och Marcus
 hiddenMarkov=function(){
   
 }
 
+#Lukas
 findShortestPath=function() {
   
 }
 
+#Jonas
 z_score=function() {
   
 }
