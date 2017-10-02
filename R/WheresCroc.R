@@ -8,10 +8,37 @@ findShortestPath=function() {
   
 }
 
+z_score=function() {
+  
+}
+
 ourWC=function(moveInfo,readings,positions,edges,probs) {
   
   return(moveInfo)
 }
+
+turist_eaten = function(turist_point){
+  if(turist_point < 0){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+
+
+generate_e_matrix =function(){
+  
+}
+
+prob_edge_movement = function(point,edges){
+  options=getOptions(point,edges)
+  div_arg = length(options)
+  prob = 1/div_arg
+  return(prob)
+}
+
+#__________________________________________OUR CODE END HERE_____________________________________________________________
 
 #' @export
 randomWC=function(moveInfo,readings,positions,edges,probs) {
@@ -49,31 +76,6 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
   moveInfo$moves=c(mv1,mv2)
   return(moveInfo)
 }
-
-
-turist_eaten = function(turist_point){
-  if(turist_point < 0){
-    return(TRUE)
-  }
-  else{
-    return(FALSE)
-  }
-}
-
-
-generate_e_matrix =function(){
-  
-  
-  
-}
-
-prob_edge_movement = function(point,edges){
-  options=getOptions(point,edges)
-  div_arg = length(options)
-  prob = 1/div_arg
-  return(prob)
-}
-
 
 testWC = function(moveInfo,readings,positions,edges,probs){
   options=getOptions(7,edges)
