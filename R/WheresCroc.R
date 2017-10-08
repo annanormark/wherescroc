@@ -1,7 +1,51 @@
 
 #Anna och Marcus
-hiddenMarkov=function(){
+hiddenMarkov=function(bestNodes, edges, readings, moveInfo){
+  lastDestination = moveInfo$mem$destination
+  lastReadings = moveInfo$mem$readings
   
+  newDestination = list(pos = 0, prob = 0)
+  #from the best 5 nodes, run hidden markov
+  for(node in nrow(bestNodes)) {
+    neighbours = getOptions(node, edges)
+  
+    prob = 0
+    for(neighbour in neighbours) {
+      transferProb = 1/length(getOptions(neighbour, edges))
+      z_score = z_score(neighbour, lastReadings)
+      n_prob = transferProb * z_score * node$prob
+    
+      if (n_prob > prob) {
+        prob = n_prob
+      }
+    }
+  
+    if (newDestination$prob < prob) {
+      newDestination$pos = node
+      newDestination$prob = prob
+    }
+  }
+  prob = 0
+  lastDestinationChild = list(pos = 0, prob = 0)
+  lastDestinationNeighbours = getOptions(lastDestination,edges)
+  for(neighbour in lastDestinationNeighbours) {
+    transferProb = 1/length(lastDestinationNeighbours)
+    z_score = z_score(neighbour, readings)
+    n_prob = z_score * (transferProb * lastDestination$prob + ((1 - lastDestination$prob) * (1/(length(getOptions(neighbour, edges)) - 1)))) 
+    
+    if (n_prob > prob) {
+      prob = n_prob
+      lastDestinationChild$pos = neighbour
+      lastDestinationChild$prob = prob
+    }
+  }
+  
+  if (newDestination$prob < lastDestinationChild$prob) {
+    newDestination$pos = lastDestinationChild$pos
+    newDestination$prob = lastDestinationChild$prob
+  }
+  
+  return(newDestination)
 }
 
 #Lukas
@@ -10,16 +54,24 @@ findShortestPath=function() {
 }
 
 #Jonas
+#checka dnorm, verkar göra detta ganska lätt! /M&A
 z_score=function() {
   
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
-  
+  #z_score on all nodes
+  probabilityList = list()
+  for(count in nrow(probs[1])) {
+    probability = z_score(count)
+    c(probabilityList, c(position=count, prob=probability))
+  }
+  probabilityList = order(lapply(probabilityList, function(x) x[2]), decreasing = TRUE)
+  hiddenMarkov(probabilityList[1:5], edges, readings, moveInfo)
   return(moveInfo)
 }
 
-turist_eaten = function(turist_point){
+tourist_eaten = function(turist_point){
   if(turist_point < 0){
     return(TRUE)
   }
@@ -116,20 +168,21 @@ testWC = function(moveInfo,readings,positions,edges,probs){
 #' Your score is the number of turns it takes to find Croc.
 #' To play manually pass manualWC
 #' as the makeMoves function and enter the appropriate numbers to make moves.
-#' @param makeMoves Your function that takes five arguments: (1) A list of information for the move.
+#' @param makeMoves Your function that takes five arguments: 
+#' (1) A list of information for the move.
 #' This has two fiels. The first is a vector of numbers called 'moves', where you will enter 
-#' the moves you want to make. You should
-#' enter two moves (so you can move to a neighboring waterhole and search). Valid moves are the 
+#' the moves you want to make. You should enter two moves (so you can move to a neighboring waterhole and search). Valid moves are the 
 #' numbers of a neighboring or current waterhole or '0' which means you will search your current
-#' waterhole for Croc. The second field is a list called
-#' 'mem' that you can use to store information you want to remember from turn to turn. (2) A 
-#' vector giving the salinity, phosphate and nitrogen reading from Croc sensors at his current 
-#' location. (3) A vector giving the positions of the two tourists and yourself. If a tourist
+#' waterhole for Croc. The second field is a list called 'mem' that you can use to store information you want to remember from turn to turn. 
+#' (2) A vector giving the salinity, phosphate and nitrogen reading from Croc sensors at his current 
+#' location. 
+#' (3) A vector giving the positions of the two tourists and yourself. If a tourist
 #' has just been eaten by Croc that turn, the position will be multiplied by -1. If a tourist 
-#' was eaten by Croc in a previous turn, then the position will be NA. (4) a matrix giving the 
-#' edges paths between waterholes (edges) present. (5) a list of three matrices giving the mean
-#' and standard deviation of readings for salinity, phosphate and nitrogen respectively
-#' at each waterhole.
+#' was eaten by Croc in a previous turn, then the position will be NA. 
+#' (4) a matrix giving the edges paths between waterholes (edges) present. 
+#' (5) a list of three matrices giving the mean and standard deviation of readings for salinity, 
+#' phosphate and nitrogen respectively at each waterhole.
+#' 
 #' Your function should return the first argument passed with an updated moves vector 
 #' and any changes to the 'mem' field you wish to access later on.
 #' @param showCroc A Boolean value specifying whether you want Croc to be shown on the gameboard.
