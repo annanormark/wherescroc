@@ -10,6 +10,13 @@ findShortestPath=function() {
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
   
+  # generate z1*z2*z3=z for all waterholes
+  # pick best 5
+  # generate trans_matrix
+  # generate e_matrix
+  # run hidden markov
+  # 
+  
   return(moveInfo)
 }
 
@@ -51,7 +58,7 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
 }
 
 
-turist_eaten = function(turist_point){
+tourist_eaten = function(turist_point){
   if(turist_point < 0){
     return(TRUE)
   }
