@@ -1,24 +1,171 @@
 
+#Anna och Marcus
+hiddenMarkov=function(bestNodes, edges, readings, moveInfo){
+  lastDestination = moveInfo$mem$destination
+  lastReadings = moveInfo$mem$readings
+  
+  newDestination = list(pos = 0, prob = 0)
+  #from the best 5 nodes, run hidden markov
+  for(node in nrow(bestNodes)) {
+    neighbours = getOptions(node, edges)
+  
+    prob = 0
+    for(neighbour in neighbours) {
+      transferProb = 1/length(getOptions(neighbour, edges))
+      z_score = z_score(neighbour, lastReadings)
+      n_prob = transferProb * z_score * node$prob
+    
+      if (n_prob > prob) {
+        prob = n_prob
+      }
+    }
+  
+    if (newDestination$prob < prob) {
+      newDestination$pos = node
+      newDestination$prob = prob
+    }
+  }
+  prob = 0
+  lastDestinationChild = list(pos = 0, prob = 0)
+  lastDestinationNeighbours = getOptions(lastDestination,edges)
+  for(neighbour in lastDestinationNeighbours) {
+    transferProb = 1/length(lastDestinationNeighbours)
+    z_score = z_score(neighbour, readings)
+    n_prob = z_score * (transferProb * lastDestination$prob + ((1 - lastDestination$prob) * (1/(length(getOptions(neighbour, edges)) - 1)))) 
+    
+    if (n_prob > prob) {
+      prob = n_prob
+      lastDestinationChild$pos = neighbour
+      lastDestinationChild$prob = prob
+    }
+  }
+  
+  if (newDestination$prob < lastDestinationChild$prob) {
+    newDestination$pos = lastDestinationChild$pos
+    newDestination$prob = lastDestinationChild$prob
+  }
+  
+  return(newDestination)
+}
 
-hiddenMarkov=function(){
+#while current != dest
+#add current to visited
+#go to current->neighbors not visited
+#if current == dest -> return visited
+
+findShortestPath_helper =function(current,dest,edges,visited,shortest_path){
+  if(current==dest){
+    #print("found!")
+    return(c(visited,current))
+  }
+  neigh = getOptions(current,edges)
+  neigh= setdiff(neigh,c(current))
+  neigh = setdiff(neigh,visited)
+  neigh_length = length(neigh)
+  if(length(neigh)==0){
+    #print("neigh == 0")
+    return(shortest_path)
+  }
+  print("neigh:")
+  print(paste(c(neigh)))
+  #print(paste("current:",current))
+  visited=c(visited,current)
+  print("visited:")
+  print(paste(visited))
+  Sys.sleep(1)
+  for(n in neigh){
+    if(n == dest){
+      return(c(shortest_path,dest))
+    }
+    path_new = findShortestPath_helper(n,dest,edges,visited,shortest_path)
+    if(is.na(shortest_path) || length(path_new)<length(shortest_path)){
+      shortest_path = path_new
+      print("shortest_path:")
+      print(paste(shortest_path))
+    }
+  }
+  return(shortest_path)
+}
+
+
+bfs=function(node,edges){
+  visited = c(node)
+  open = c(node)
+  while(length(open) != 0){
+    
+  }
+
+}
+
+#Lukas
+findShortestPath=function(point,dest,edges){
+  visited = c()
+  shortest_path=findShortestPath_helper(point,dest,edges,visited,shortest_path=NA)
+  print("done")
+  return(shortest_path[1])
+}
+
+
+testWC = function(moveInfo,readings,positions,edges,probs){
+  options=getOptions(7,edges)
+  prob_edge = prob_edge_movement(7,edges)
+  print(prob_edge)
+  print("Move 1 options (plus 0 for search):")
+  print(options)  
+  
+  print(readings)
+  points = getPoints()
+  print(points)
+  
+  edges=getEdges()
+  print(edges)
+  probs=getProbs()
+  print(probs)
+  
+  print(findShortestPath(1,8,edges))
   
 }
 
-findShortestPath=function() {
+#Jonas
+#checka dnorm, verkar gora detta ganska latt! /M&A
+z_score=function() {
   
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
-  
-  # generate z1*z2*z3=z for all waterholes
-  # pick best 5
-  # generate trans_matrix
-  # generate e_matrix
-  # run hidden markov
-  # 
-  
+  #z_score on all nodes
+  probabilityList = list()
+  for(count in nrow(probs[1])) {
+    probability = z_score(count)
+    c(probabilityList, c(position=count, prob=probability))
+  }
+  probabilityList = order(lapply(probabilityList, function(x) x[2]), decreasing = TRUE)
+  hiddenMarkov(probabilityList[1:5], edges, readings, moveInfo)
   return(moveInfo)
 }
+
+tourist_eaten = function(turist_point){
+  if(turist_point < 0){
+    return(TRUE)
+  }
+  else{
+    return(FALSE)
+  }
+}
+
+
+generate_e_matrix =function(){
+  
+}
+
+prob_edge_movement = function(point,edges){
+  options=getOptions(point,edges)
+  div_arg = length(options)
+  prob = 1/div_arg
+  return(prob)
+}
+
+#__________________________________________OUR CODE END HERE_____________________________________________________________
 
 #' @export
 randomWC=function(moveInfo,readings,positions,edges,probs) {
@@ -58,49 +205,6 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
 }
 
 
-tourist_eaten = function(turist_point){
-  if(turist_point < 0){
-    return(TRUE)
-  }
-  else{
-    return(FALSE)
-  }
-}
-
-
-generate_e_matrix =function(){
-  
-  
-  
-}
-
-prob_edge_movement = function(point,edges){
-  options=getOptions(point,edges)
-  div_arg = length(options)
-  prob = 1/div_arg
-  return(prob)
-}
-
-
-testWC = function(moveInfo,readings,positions,edges,probs){
-  options=getOptions(7,edges)
-  prob_edge = prob_edge_movement(7,edges)
-  print(prob_edge)
-  print("Move 1 options (plus 0 for search):")
-  print(options)  
-  
-  print(readings)
-  points = getPoints()
-  print(points)
-  
-  edges=getEdges()
-  print(edges)
-  probs=getProbs()
-  print(probs)
-  
-  
-}
-
 #' Run Where's Croc
 #' 
 #' Runs the Where's Croc game. In this game, you are a ranger in an Australian national park. 
@@ -119,20 +223,21 @@ testWC = function(moveInfo,readings,positions,edges,probs){
 #' Your score is the number of turns it takes to find Croc.
 #' To play manually pass manualWC
 #' as the makeMoves function and enter the appropriate numbers to make moves.
-#' @param makeMoves Your function that takes five arguments: (1) A list of information for the move.
+#' @param makeMoves Your function that takes five arguments: 
+#' (1) A list of information for the move.
 #' This has two fiels. The first is a vector of numbers called 'moves', where you will enter 
-#' the moves you want to make. You should
-#' enter two moves (so you can move to a neighboring waterhole and search). Valid moves are the 
+#' the moves you want to make. You should enter two moves (so you can move to a neighboring waterhole and search). Valid moves are the 
 #' numbers of a neighboring or current waterhole or '0' which means you will search your current
-#' waterhole for Croc. The second field is a list called
-#' 'mem' that you can use to store information you want to remember from turn to turn. (2) A 
-#' vector giving the salinity, phosphate and nitrogen reading from Croc sensors at his current 
-#' location. (3) A vector giving the positions of the two tourists and yourself. If a tourist
+#' waterhole for Croc. The second field is a list called 'mem' that you can use to store information you want to remember from turn to turn. 
+#' (2) A vector giving the salinity, phosphate and nitrogen reading from Croc sensors at his current 
+#' location. 
+#' (3) A vector giving the positions of the two tourists and yourself. If a tourist
 #' has just been eaten by Croc that turn, the position will be multiplied by -1. If a tourist 
-#' was eaten by Croc in a previous turn, then the position will be NA. (4) a matrix giving the 
-#' edges paths between waterholes (edges) present. (5) a list of three matrices giving the mean
-#' and standard deviation of readings for salinity, phosphate and nitrogen respectively
-#' at each waterhole.
+#' was eaten by Croc in a previous turn, then the position will be NA. 
+#' (4) a matrix giving the edges paths between waterholes (edges) present. 
+#' (5) a list of three matrices giving the mean and standard deviation of readings for salinity, 
+#' phosphate and nitrogen respectively at each waterhole.
+#' 
 #' Your function should return the first argument passed with an updated moves vector 
 #' and any changes to the 'mem' field you wish to access later on.
 #' @param showCroc A Boolean value specifying whether you want Croc to be shown on the gameboard.
