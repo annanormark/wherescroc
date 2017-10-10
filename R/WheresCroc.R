@@ -48,61 +48,50 @@ hiddenMarkov=function(bestNodes, edges, readings, moveInfo){
   return(newDestination)
 }
 
-#while current != dest
-#add current to visited
-#go to current->neighbors not visited
-#if current == dest -> return visited
 
-findShortestPath_helper =function(current,dest,edges,visited,shortest_path){
-  if(current==dest){
-    #print("found!")
-    return(c(visited,current))
-  }
-  neigh = getOptions(current,edges)
-  neigh= setdiff(neigh,c(current))
-  neigh = setdiff(neigh,visited)
-  neigh_length = length(neigh)
-  if(length(neigh)==0){
-    #print("neigh == 0")
-    return(shortest_path)
-  }
-  print("neigh:")
-  print(paste(c(neigh)))
-  #print(paste("current:",current))
-  visited=c(visited,current)
-  print("visited:")
-  print(paste(visited))
-  Sys.sleep(1)
-  for(n in neigh){
-    if(n == dest){
-      return(c(shortest_path,dest))
-    }
-    path_new = findShortestPath_helper(n,dest,edges,visited,shortest_path)
-    if(is.na(shortest_path) || length(path_new)<length(shortest_path)){
-      shortest_path = path_new
-      print("shortest_path:")
-      print(paste(shortest_path))
-    }
-  }
-  return(shortest_path)
-}
-
-
-bfs=function(node,edges){
-  visited = c(node)
+bfs=function(node,dest,edges){
+  visited = c(node)#added prevnode!
   open = c(node)
-  while(length(open) != 0){
-    
+  prev= numeric()
+  prev[node]=-1
+  current = node
+  #print("start")
+  #print(current)
+  while(length(open) != 0 && current != dest){
+    #Sys.sleep(1)
+    current=head(open,n=1)#head
+    visited=c(visited,c(current))
+    open =setdiff(open,c(current))#dequeue
+    neigh = getOptions(current,edges)#get children
+    neigh= setdiff(neigh,c(current))
+    neigh = setdiff(neigh,visited)
+    #print("head")
+    #print(current)
+    #print("neigh")
+    #print(neigh)
+    for(n in neigh){
+      open=c(open,n)
+      prev[n]=current
+      #print("prev")
+      #print(prev)
+    }  
   }
-
+  return(prev)
 }
 
 #Lukas
 findShortestPath=function(point,dest,edges){
-  visited = c()
-  shortest_path=findShortestPath_helper(point,dest,edges,visited,shortest_path=NA)
-  print("done")
-  return(shortest_path[1])
+  prev_list = bfs(point,dest,edges)
+  shortest_path = c(dest)
+  current=dest
+  while(current != -1){
+    if(prev_list[current] != -1){
+      shortest_path= c(prev_list[current],shortest_path)
+    }
+      current=prev_list[current]
+  }
+  #print("done")
+  return(shortest_path)
 }
 
 
@@ -122,7 +111,18 @@ testWC = function(moveInfo,readings,positions,edges,probs){
   probs=getProbs()
   print(probs)
   
-  print(findShortestPath(1,8,edges))
+  shortest_path = findShortestPath(positions[3],17,edges)
+  print(shortest_path)#print debug
+  if(length(shortest_path) >= 3){
+    moveInfo$moves = c(shortest_path[2],shortest_path[3])
+  }
+  else if(length(shortest_path) == 2){
+    moveInfo$moves = c(shortest_path[2],0)
+  }
+  else{
+    moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
+  }
+  return(moveInfo)
   
 }
 
