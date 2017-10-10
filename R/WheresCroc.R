@@ -94,7 +94,6 @@ findShortestPath=function(point,dest,edges){
   return(shortest_path)
 }
 
-
 testWC = function(moveInfo,readings,positions,edges,probs){
   options=getOptions(7,edges)
   prob_edge = prob_edge_movement(7,edges)
