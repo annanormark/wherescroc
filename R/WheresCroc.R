@@ -127,9 +127,55 @@ testWC = function(moveInfo,readings,positions,edges,probs){
 }
 
 #Jonas
-#checka dnorm, verkar gora detta ganska latt! /M&A
-z_score=function() {
+#checka dnorm, verkar g??ra detta ganska l??tt! /M&A
+z_score=function(readings, probs) {
+  A = matrix(
+    nrow = 40,
+    ncol = 3
+  )
+  z_list <- c("list",40)
   
+  for(i in 1:40){
+    z_list[i] = 0
+  }
+  
+  for(i in 1:40){
+    A[i,1] = dnorm(readings[1], probs$salinity[i,1], probs$salinity[i,2], FALSE)
+    A[i,2] = dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) 
+    A[i,3] = dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
+    z_list[i] = A[i,1] * A[i,2] * A[i,3]  # Multiplicerar varje rad och l'gger i z_list, 40 element totalt
+  }
+  
+  #print(as.numeric(z_list))
+  
+  highestValue = 0
+  secondHighest = 0
+  valueIndex = 0
+  for(i in 1:40){
+      if((as.numeric(z_list[i])) > highestValue){
+          secondHighest = highestValue
+          highestValue = as.numeric(z_list[i])
+          #print(highestValue)
+          #print(z_list[i])
+          valueIndex = i
+      }
+      
+  }
+  summary = sum(as.numeric(z_list))
+  maximum = max(as.numeric(z_list))
+  print(valueIndex)
+  
+  #print("difference")
+  #print(highestValue - secondHighest)
+  
+  #print(maximum)
+  #print("round")
+  #print(z_list)
+  
+  #print(summary)
+  #print(maximum)
+ 
+  return(maximum)
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
@@ -170,11 +216,15 @@ prob_edge_movement = function(point,edges){
 #' @export
 randomWC=function(moveInfo,readings,positions,edges,probs) {
   moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
-  print(moveInfo)
-  print(readings)
-  print(positions)
-  print(edges)
-  print(probs)
+  #print(moveInfo)
+  #print(readings)
+  #print(positions)
+  #print(edges)
+  #rint(probs)
+  #rint(A)
+  #rint(readings)
+  #print("croc at: ")
+  z_score(readings, probs)
   return(moveInfo)
 }
 
