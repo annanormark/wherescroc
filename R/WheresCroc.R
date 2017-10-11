@@ -48,7 +48,7 @@ hiddenMarkov=function(bestNodes, edges, readings, moveInfo){
   return(newDestination)
 }
 
-
+#Lukas
 bfs=function(node,dest,edges){
   visited = c(node)#added prevnode!
   open = c(node)
@@ -97,18 +97,27 @@ findShortestPath=function(point,dest,edges){
 testWC = function(moveInfo,readings,positions,edges,probs){
   options=getOptions(7,edges)
   prob_edge = prob_edge_movement(7,edges)
-  print(prob_edge)
-  print("Move 1 options (plus 0 for search):")
-  print(options)  
+  #print(prob_edge)
+  #print("Move 1 options (plus 0 for search):")
+  #print(options)  
   
-  print(readings)
-  points = getPoints()
-  print(points)
+  #print(readings)
+  #points = getPoints()
+  #print(points)
   
-  edges=getEdges()
-  print(edges)
-  probs=getProbs()
-  print(probs)
+  #edges=getEdges()
+  #print(edges)
+  #probs=getProbs()
+  #print(probs)
+  
+  z_score_list = z_score(readings,probs)
+  print("z_score_list")
+  print(z_score_list)
+  top_five_nodes = top_five(z_score_list)
+  print("top_five_nodes")
+  print(top_five_nodes)
+  
+  
   
   shortest_path = findShortestPath(positions[3],17,edges)
   print(shortest_path)#print debug
@@ -121,8 +130,29 @@ testWC = function(moveInfo,readings,positions,edges,probs){
   else{
     moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
   }
+  
   return(moveInfo)
   
+}
+
+
+top_five= function(list){
+  best_5_nodes= numeric()
+  while(length(best_5_nodes) < 5){
+    #hitta top 5 index
+    current_highest = 0
+    current_highest_index = 0
+    for(index in 1:40){
+      if(list[index] > current_highest)
+      {
+        current_highest=list[index]
+        current_highest_index=index
+      }
+    }
+    best_5_nodes= c(best_5_nodes,current_highest_index)
+    list[current_highest_index] = 0
+  }
+  return(best_5_nodes)
 }
 
 #Jonas
@@ -174,7 +204,8 @@ z_score=function(readings, probs) {
   #print(summary)
   #print(maximum)
  
-  return(maximum)
+  #return(maximum)
+  return(as.numeric(z_list))
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
@@ -198,10 +229,6 @@ tourist_eaten = function(turist_point){
   }
 }
 
-
-generate_e_matrix =function(){
-  
-}
 
 prob_edge_movement = function(point,edges){
   options=getOptions(point,edges)
