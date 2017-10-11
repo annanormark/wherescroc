@@ -127,6 +127,28 @@ testWC = function(moveInfo,readings,positions,edges,probs){
 
 #Jonas
 #checka dnorm, verkar g??ra detta ganska l??tt! /M&A
+top_five=function(list){
+  
+  best_nodes = numeric()
+  highestValue = 0
+  valueIndex = 0
+  j = 0
+  
+  for(j in 1:5){
+    for(i in 1:40){
+      if(highestValue < list[i]){
+        highestValue = list[i]
+        valueIndex = i
+      }
+    }
+    best_nodes <- c(best_nodes, valueIndex)
+    list[valueIndex] = 0
+    highestValue = 0
+  }
+  print(best_nodes)
+  return(best_nodes)
+}
+
 z_score=function(readings, probs) {
   A = matrix(
     nrow = 40,
@@ -150,31 +172,19 @@ z_score=function(readings, probs) {
   highestValue = 0
   secondHighest = 0
   valueIndex = 0
+  
   for(i in 1:40){
       if((as.numeric(z_list[i])) > highestValue){
           secondHighest = highestValue
           highestValue = as.numeric(z_list[i])
-          #print(highestValue)
-          #print(z_list[i])
           valueIndex = i
       }
       
   }
   summary = sum(as.numeric(z_list))
   maximum = max(as.numeric(z_list))
-  print(valueIndex)
-  
-  #print("difference")
-  #print(highestValue - secondHighest)
-  
-  #print(maximum)
-  #print("round")
-  #print(z_list)
-  
-  #print(summary)
-  #print(maximum)
- 
-  return(maximum)
+  #print(as.numeric(z_list))
+  return(as.numeric(z_list))
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
@@ -223,7 +233,7 @@ randomWC=function(moveInfo,readings,positions,edges,probs) {
   #rint(A)
   #rint(readings)
   #print("croc at: ")
-  z_score(readings, probs)
+  top_five(z_score(readings, probs))
   return(moveInfo)
 }
 
