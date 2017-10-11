@@ -48,6 +48,70 @@ hiddenMarkov=function(bestNodes, edges, readings, moveInfo){
   return(newDestination)
 }
 
+#Jones och LullPatrull
+hiddenMarkovNew=function(bestNodes, edges, readings, moveInfo,probs){
+  lastDestination = moveInfo$mem$destination
+  lastReadings = moveInfo$mem$readings
+  #print("lastDestination")
+  #print(lastDestination)
+  #print("lastReadings")
+  #print(lastReadings)
+  newDestination = list(pos = 0, prob = 0)
+  #from the best 5 nodes, run hidden markov
+  for(node in bestNodes) {
+    neighbours = getOptions(node, edges)
+    prob = 0
+    #print("node")
+    #print(node)
+    for(neighbour in neighbours){
+      transferProb = 1/length(getOptions(neighbour, edges))
+      z_score_list = z_score(readings,probs)
+      n_prob = transferProb * z_score_list[neighbour] * z_score_list[node]
+      if (n_prob > prob) {
+        prob = n_prob
+      }
+    }
+    if (newDestination$prob < prob) {
+      newDestination$pos = node
+      newDestination$prob = prob
+    }
+  }
+  #print("newDestination$pos")
+  #print(newDestination$pos)
+  #print("newDestination$prob")
+  #print(newDestination$prob)
+  
+  prob = 0
+  lastDestinationChild = list(pos = 0, prob = 0)
+  lastDestinationNeighbours = getOptions(lastDestination,edges)
+  #print("lastDestinationChild")
+  #print(lastDestinationChild)
+  #print("lastDestinationNeighbours")
+  #print(lastDestinationNeighbours)
+  
+  for(neighbour in lastDestinationNeighbours) {
+    transferProb = 1/length(lastDestinationNeighbours)
+    #z_score = z_score(neighbour, readings)
+    #n_prob = z_score * (transferProb * lastDestination$prob + ((1 - lastDestination$prob) * (1/(length(getOptions(neighbour, edges)) - 1)))) 
+    z_score_list = z_score(readings,probs)
+    n_prob = z_score_list[neighbour] * (transferProb * lastReadings + ((1 - lastReadings) * (1/(length(getOptions(neighbour, edges)) - 1))))
+    #print("n_prob child")
+    #print(n_prob)
+    if (n_prob > prob) {
+      prob = n_prob
+      lastDestinationChild$pos = neighbour
+      lastDestinationChild$prob = prob
+    }
+  }
+  
+  if (newDestination$prob < lastDestinationChild$prob) {
+    newDestination$pos = lastDestinationChild$pos
+    newDestination$prob = lastDestinationChild$prob
+  }
+  return(newDestination)
+}
+
+
 #Lukas
 bfs=function(node,dest,edges){
   visited = c(node)#added prevnode!
@@ -95,31 +159,26 @@ findShortestPath=function(point,dest,edges){
 }
 
 testWC = function(moveInfo,readings,positions,edges,probs){
-  options=getOptions(7,edges)
-  prob_edge = prob_edge_movement(7,edges)
-  #print(prob_edge)
-  #print("Move 1 options (plus 0 for search):")
-  #print(options)  
   
-  #print(readings)
-  #points = getPoints()
-  #print(points)
-  
-  #edges=getEdges()
-  #print(edges)
-  #probs=getProbs()
-  #print(probs)
-  
+  if(!("destination"  %in% names(moveInfo$mem))){
+    moveInfo$mem = list(destination=positions[3],readings=0) #init mem
+  }
   z_score_list = z_score(readings,probs)
-  print("z_score_list")
-  print(z_score_list)
+  #print("z_score_list")
+  #print(z_score_list)
   top_five_nodes = top_five(z_score_list)
   print("top_five_nodes")
   print(top_five_nodes)
+  newDestination = hiddenMarkovNew(top_five_nodes, edges, readings, moveInfo,probs)
+  moveInfo$mem$destination = newDestination$pos
+  moveInfo$mem$readings = newDestination$prob
   
-  
-  
-  shortest_path = findShortestPath(positions[3],17,edges)
+  new_dest_node = newDestination$pos
+  print("new_dest_node")#print debug
+  print(new_dest_node)#print debug
+  Sys.sleep(2)
+  shortest_path = findShortestPath(positions[3],new_dest_node,edges)
+  print("shortest_path")#print debug
   print(shortest_path)#print debug
   if(length(shortest_path) >= 3){
     moveInfo$moves = c(shortest_path[2],shortest_path[3])
@@ -131,7 +190,6 @@ testWC = function(moveInfo,readings,positions,edges,probs){
     moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
   }
   return(moveInfo)
-  
 }
 
 #Jonas
