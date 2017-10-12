@@ -250,42 +250,35 @@ top_five=function(list){
   return(best_nodes)
 }
 
-z_score=function(readings, probs) {
-  A = matrix(
+hiddenMarkov = function(lastProbMatrix, transMatrix) {
+  productMatrix = lastprobMatrix %*% transMatrix
+  
+  sumMatrix = matrix(
     nrow = 40,
-    ncol = 3
+    ncol = 40
   )
-  z_list <- c("list",40)
+  
+  obsMatrix = matrix(
+    nrow = 40,
+    ncol = 40
+  )
   
   for(i in 1:40){
-    z_list[i] = 0
+    obsMatrix[i,i] = dnorm(readings[1], probs$salinity[i,1], probs$salinity[i,2], FALSE) *
+     dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) *
+     dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
+    # 40 * 40 matrix with identitymatrix = obsMatrix
   }
   
   for(i in 1:40){
-    A[i,1] = dnorm(readings[1], probs$salinity[i,1], probs$salinity[i,2], FALSE)
-    A[i,2] = dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) 
-    A[i,3] = dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
-    z_list[i] = A[i,1] * A[i,2] * A[i,3]  # Multiplicerar varje rad och l'gger i z_list, 40 element totalt
+    sumMatrix[i,i] = sum(productMatrix[,i])
   }
+  probMatrix = sumMatrix %*% obsMatrix
+  normalizedValue = 1/sum(probMatrix)
+  normalizedMatrix = probMatrix * normalizedValue
+  highestProbPos = row(normalizedMatrix)[which.max(normalizedMatrix)]
   
-  #print(as.numeric(z_list))
-  
-  highestValue = 0
-  secondHighest = 0
-  valueIndex = 0
-  
-  #for(i in 1:40){
-  #    if((as.numeric(z_list[i])) > highestValue){
-  #        secondHighest = highestValue
-  #        highestValue = as.numeric(z_list[i])
-  #        valueIndex = i
-  #    }
-      
-  #}
-  summary = sum(as.numeric(z_list))
-  maximum = max(as.numeric(z_list))
-  #print(as.numeric(z_list))
-  return(as.numeric(z_list))
+  return(highestProbPos, normalizedMatrix)
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
