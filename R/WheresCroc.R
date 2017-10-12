@@ -1,6 +1,6 @@
 
 #Anna och Marcus
-hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs){
+hiddenMarkovX=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs){
   lastDestination = moveInfo$mem$destination
   lastReadings = moveInfo$mem$readings
   newDestination = list(pos = 0, prob = 0)
@@ -57,7 +57,7 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
   return(moveInfo)
 }
 
-trasitionMatrix=function(edges) {
+getTransitionMatrix=function(edges) {
   transitionMatrix = matrix(
     0, 
     ncol = 40, 
@@ -66,40 +66,12 @@ trasitionMatrix=function(edges) {
   for(column in 1:40) {
     neighbours = getOptions(column, edges)
     for(row in neighbours) {
-      transitionMatrix[row][column] = 1/length(neighbours)
+      prob = 1/length(neighbours)
+      transitionMatrix[row, column] = prob
     }
   }
-  
   return(transitionMatrix)
 }
-
-normalize = function(listOfNodes){
-  print("*************************************")
-  total = 0
-  for(node in listOfNodes) {
-    total = total + node$prob
-    print(paste("in loop: ",total))
-  }
-  print(total)
-  bestprob = list(pos = 0, prob = 0)
-  print("in new loop")
-  for(node in listOfNodes) {
-    print(node$prob)
-    normalizedProb = node$prob/total
-    print(normalizedProb)
-    print("   ")
-    if (normalizedProb > bestprob$prob) {
-      bestprob$prob = normalizedProb
-      bestprob$pos = node$node
-    }
-  }
-  return(bestprob)
-}
-
-
-
-
-
 
 #Jones och LullPatrull
 return_node_with_highest_f=function(f_list){
@@ -274,55 +246,71 @@ z_score=function(readings, probs) {
   return(z_list)
 }
 
-
-
-hiddenMarkov = function(lastProbMatrix, transMatrix) {
-  productMatrix = lastprobMatrix %*% transMatrix
+hiddenMarkov = function(lastProbMatrix, edges, readings, probs) {
+  transMatrix = getTransitionMatrix(edges)
+  productMatrix = lastProbMatrix %*% transMatrix
   
   sumMatrix = matrix(
+    data = 0,
     nrow = 40,
     ncol = 40
   )
   
   obsMatrix = matrix(
+    data = 0,
     nrow = 40,
     ncol = 40
   )
   
   for(i in 1:40){
     obsMatrix[i,i] = dnorm(readings[1], probs$salinity[i,1], probs$salinity[i,2], FALSE) *
-      dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) *
-      dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
+     dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) *
+     dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
     # 40 * 40 matrix with identitymatrix = obsMatrix
   }
-  
+
   for(i in 1:40){
     sumMatrix[i,i] = sum(productMatrix[,i])
   }
   probMatrix = sumMatrix %*% obsMatrix
+
   normalizedValue = 1/sum(probMatrix)
   normalizedMatrix = probMatrix * normalizedValue
   highestProbPos = row(normalizedMatrix)[which.max(normalizedMatrix)]
-  
-  return(highestProbPos, normalizedMatrix)
+
+  returnlist = list(position = highestProbPos, probMatrix = normalizedMatrix)
+  return(returnlist)
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
-  #z_score on all nodes
-  probability = z_score(readings, probs)
-  bestFiveNodes = top_five(probability)
-  
-  if(!("destination"  %in% names(moveInfo$mem))){
-    moveInfo$mem <- list(destination=list(pos=bestFiveNodes[1], prob=0), readings=0)
+  if(length(moveInfo$mem) <= 0) {
+    moveInfo$mem = matrix(
+      data = 0,
+      nrow = 40,
+      ncol = 40
+    )
+    for(i in 1:40) {
+      moveInfo$mem[i,i] = 1/40
+    }
   }
-  moveInfo = hiddenMarkov(probability, edges, readings, moveInfo, bestFiveNodes, probs)
-  moveInfo$mem$readings <- readings
-  print("destination: ")
-  print(moveInfo$mem$destination$pos)
+  position = 0
+  if(tourist_eaten(positions[1])) {
+    position = abs(positions[1])
+    probMatrix = matrix(nrow = 40, ncol = 40)
+    probMatrix[position, position] = 1
+  } else if(tourist_eaten(positions[2])) {
+    position = abs(positions[2])
+    probMatrix = matrix(nrow = 40, ncol = 40)
+    probMatrix[position, position] = 1
+  } else {
+    returnlist = hiddenMarkov(moveInfo$mem, edges, readings, probs)
+    position = returnlist$position
+    probMatrix = returnlist$probMatrix
+    moveInfo$mem = probMatrix
+  }
+  print(paste("dest: ", position))
   
-  shortest_path = findShortestPath(positions[3], moveInfo$mem$destination$pos, edges)
-  print("shortest_path")#print debug
-  print(shortest_path)#print debug
+  shortest_path = findShortestPath(positions[3], position, edges)
   if(length(shortest_path) >= 3){
     moveInfo$moves = c(shortest_path[2],shortest_path[3])
   }
@@ -336,7 +324,7 @@ ourWC=function(moveInfo,readings,positions,edges,probs) {
 }
 
 tourist_eaten = function(turist_point){
-  if(turist_point < 0){
+  if(!is.na(turist_point) && turist_point < 0){
     return(TRUE)
   }
   else{
@@ -436,7 +424,7 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
 #' @param pause The pause period between moves. Ignore this.
 #' @return A string describing the outcome of the game.
 #' @export
-runWheresCroc=function(makeMoves=ourWC,showCroc=T,pause=2) {
+runWheresCroc=function(makeMoves=ourWC,showCroc=T,pause=1) {
   positions=sample(1:40,4) # Croc, BP1, BP2, Player
   points=getPoints()
   edges=getEdges()
