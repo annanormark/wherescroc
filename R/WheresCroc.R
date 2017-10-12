@@ -9,7 +9,6 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
   for(node in nrow(nodesProb)) {
     neighbours = getOptions(node, edges)
     nodeProb = nodesProb[node]
-  
     neigbourlist = list()
     for(neighbour in neighbours) {
       if(neighbour != 0) {
@@ -23,14 +22,12 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
       }
     }
     bestprob = normalize(neigbourlist)
-  
     if (newDestination$prob < bestprob$prob) {
       newDestination$pos = node
       newDestination$prob = bestprob$prob
     }
   }
   print(newDestination)
-  
   prob = 0
   n_prob = 0
   lastDestinationNeighbours = getOptions(lastDestination, edges)
@@ -77,67 +74,58 @@ normalize = function(listOfNodes){
   return(bestprob)
 }
 
+
+
+
+
+
 #Jones och LullPatrull
-hiddenMarkovNew=function(bestNodes, edges, readings, moveInfo,probs){
-  lastDestination = moveInfo$mem$destination
-  lastReadings = moveInfo$mem$readings
-  #print("lastDestination")
-  #print(lastDestination)
-  #print("lastReadings")
-  #print(lastReadings)
-  newDestination = list(pos = 0, prob = 0)
-  #from the best 5 nodes, run hidden markov
-  for(node in bestNodes) {
-    neighbours = getOptions(node, edges)
-    prob = 0
-    #print("node")
-    #print(node)
-    for(neighbour in neighbours){
-      transferProb = 1/length(getOptions(neighbour, edges))
-      z_score_list = z_score(lastReadings,probs)
-      n_prob = transferProb * z_score_list[neighbour] * z_score_list[node]
-      if (n_prob > prob) {
-        prob = n_prob
-      }
+return_node_with_highest_f=function(f_list){
+  highestValue = -100000
+  valueIndex = 1
+  for(node in 1:40){
+    if(highestValue < f_list[node]){
+      highestValue = f_list[node]
+      valueIndex = node
     }
-    if (newDestination$prob < prob) {
-      newDestination$pos = node
-      newDestination$prob = prob
-    }
+    best_node = valueIndex
   }
-  #print("newDestination$pos")
-  #print(newDestination$pos)
-  #print("newDestination$prob")
-  #print(newDestination$prob)
-  
-  prob = 0
-  lastDestinationChild = list(pos = 0, prob = 0)
-  lastDestinationNeighbours = getOptions(lastDestination,edges)
-  #print("lastDestinationChild")
-  #print(lastDestinationChild)
-  #print("lastDestinationNeighbours")
-  #print(lastDestinationNeighbours)
-  
-  for(neighbour in lastDestinationNeighbours) {
-    transferProb = 1/length(lastDestinationNeighbours)
-    #z_score = z_score(neighbour, readings)
-    #n_prob = z_score * (transferProb * lastDestination$prob + ((1 - lastDestination$prob) * (1/(length(getOptions(neighbour, edges)) - 1)))) 
-    z_score_list = z_score(readings,probs)
-    n_prob = z_score_list[neighbour] * (transferProb * lastReadings + ((1 - lastReadings) * (1/(length(getOptions(neighbour, edges)) - 1))))
-    #print("n_prob child")
-    #print(n_prob)
-    if (n_prob > prob) {
-      prob = n_prob
-      lastDestinationChild$pos = neighbour
-      lastDestinationChild$prob = prob
-    }
+  return(best_node)
+}
+
+#Jones och LullPatrull
+generate_new_f = function(node,current_z_scores,past_f_list,edges){
+  neighbours=getOptions(node,edges)
+  new_f=0
+  for(neigh in neighbours){
+    new_f = new_f + (past_f_list[neigh]*prob_edge_movement(node,edges)) 
   }
+  new_f=new_f*current_z_scores[node]
   
-  if (newDestination$prob < lastDestinationChild$prob) {
-    newDestination$pos = lastDestinationChild$pos
-    newDestination$prob = lastDestinationChild$prob
+  return(new_f)
+}
+
+
+#Jones och LullPatrull
+hiddenMarkovNew=function(edges, readings, moveInfo,probs){
+  past_destination = moveInfo$mem$destination
+  past_f_list = moveInfo$mem$past_f
+  current_z_scores = z_score(readings,probs)
+  new_f_list=numeric()  
+  for(node in 1:40){
+    new_f_list[node] = generate_new_f(node,current_z_scores,past_f_list,edges)
   }
-  return(newDestination)
+  f_sum=sum(new_f_list,na.rm=TRUE)
+  for(node in 1:40){
+    new_f_list[node]= new_f_list[node]/f_sum
+  }
+  #pick node with highest f
+  #print("new_f_list")
+  #print(new_f_list)
+  new_dest = return_node_with_highest_f(new_f_list)
+  moveInfo$mem$destination = new_dest
+  moveInfo$mem$past_f = new_f_list
+  return(moveInfo)
 }
 
 
@@ -148,30 +136,20 @@ bfs=function(node,dest,edges){
   prev= numeric()
   prev[node]=-1
   current = node
-  #print("start")
-  #print(current)
   while(length(open) != 0 && current != dest){
-    #Sys.sleep(1)
     current=head(open,n=1)#head
     visited=c(visited,c(current))
     open =setdiff(open,c(current))#dequeue
     neigh = getOptions(current,edges)#get children
     neigh= setdiff(neigh,c(current))
     neigh = setdiff(neigh,visited)
-    #print("head")
-    #print(current)
-    #print("neigh")
-    #print(neigh)
     for(n in neigh){
       open=c(open,n)
       prev[n]=current
-      #print("prev")
-      #print(prev)
     }  
   }
   return(prev)
 }
-
 #Lukas
 findShortestPath=function(point,dest,edges){
   prev_list = bfs(point,dest,edges)
@@ -183,26 +161,30 @@ findShortestPath=function(point,dest,edges){
     }
       current=prev_list[current]
   }
-  #print("done")
   return(shortest_path)
 }
 
-testWC = function(moveInfo,readings,positions,edges,probs){
-  
+deepHouseWC = function(moveInfo,readings,positions,edges,probs){
   if(!("destination"  %in% names(moveInfo$mem))){
-    moveInfo$mem = list(destination=positions[3],readings=0) #init mem
+    #init mem
+    z_score_list=z_score(readings,probs)
+    init_f=numeric()
+    for(i in 1:40){
+      init_f[i]=(1/40)*z_score_list[i]
+    }
+    sum_init = sum(init_f)
+    for(i in 1:40){
+      init_f[i]=init_f[i]/sum_init
+    }
+    best_nodes = top_five(z_score_list)
+    best_node = best_nodes[1]
+    moveInfo$mem = list(destination=best_node,past_f=init_f) #init mem
   }
-  z_score_list = z_score(readings,probs)
-  #print("z_score_list")
-  #print(z_score_list)
-  top_five_nodes = top_five(z_score_list)
-  print("top_five_nodes")
-  print(top_five_nodes)
-  newDestination = hiddenMarkovNew(top_five_nodes, edges, readings, moveInfo,probs)
-  moveInfo$mem$destination = newDestination$pos
-  moveInfo$mem$readings = newDestination$prob
+  #end init mem
+  #perform HM, save new destinaion and past f in markovData
+  moveInfo = hiddenMarkovNew(edges, readings,moveInfo,probs)
   
-  new_dest_node = newDestination$pos
+  new_dest_node = moveInfo$mem$destination
   print("new_dest_node")#print debug
   print(new_dest_node)#print debug
   Sys.sleep(2)
@@ -212,12 +194,20 @@ testWC = function(moveInfo,readings,positions,edges,probs){
   if(length(shortest_path) >= 3){
     moveInfo$moves = c(shortest_path[2],shortest_path[3])
   }
-  else if(length(shortest_path) == 2){
+  if(length(shortest_path) == 2){
     moveInfo$moves = c(shortest_path[2],0)
   }
-  else{
+  neigh = getOptions(positions[3],edges)
+  if(new_dest_node %in% neigh){
+    print("CROC IS NEAR! GET OUT OF THE WATER!")
+    moveInfo$moves = c(new_dest_node,0)
+  }
+  if(length(shortest_path) == 1){
+    print("random")
     moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
   }
+  print("steps taken:")
+  print(moveInfo$moves)
   return(moveInfo)
 }
 
@@ -227,8 +217,6 @@ top_five=function(list){
   best_nodes = numeric()
   highestValue = 0
   valueIndex = 0
-  j = 0
-  
   for(j in 1:5){
     for(i in 1:40){
       if(highestValue < list[i]){
@@ -240,47 +228,29 @@ top_five=function(list){
     list[valueIndex] = 0
     highestValue = 0
   }
-  print("best nodes: ")
-  print(best_nodes)
   return(best_nodes)
 }
-
+#Jonas
 z_score=function(readings, probs) {
   A = matrix(
     nrow = 40,
     ncol = 3
   )
-  z_list <- c("list",40)
-  
-  for(i in 1:40){
-    z_list[i] = 0
-  }
-  
+  z_list = numeric()
   for(i in 1:40){
     A[i,1] = dnorm(readings[1], probs$salinity[i,1], probs$salinity[i,2], FALSE)
     A[i,2] = dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) 
     A[i,3] = dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
     z_list[i] = A[i,1] * A[i,2] * A[i,3]  # Multiplicerar varje rad och l'gger i z_list, 40 element totalt
+    #z_list[i] = A[i,1] + A[i,2] + A[i,3]  # Multiplicerar varje rad och l'gger i z_list, 40 element totalt
   }
-  
-  #print(as.numeric(z_list))
-  
-  highestValue = 0
-  secondHighest = 0
-  valueIndex = 0
-  
-  #for(i in 1:40){
-  #    if((as.numeric(z_list[i])) > highestValue){
-  #        secondHighest = highestValue
-  #        highestValue = as.numeric(z_list[i])
-  #        valueIndex = i
-  #    }
-      
-  #}
-  summary = sum(as.numeric(z_list))
-  maximum = max(as.numeric(z_list))
-  #print(as.numeric(z_list))
-  return(as.numeric(z_list))
+  sum_z = sum(z_list)
+  for(i in 1:40){
+    z_list[i]=z_list[i]/sum_z
+  }
+  print("z_list in z_score")
+  print(z_list)
+  return(z_list)
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
@@ -291,7 +261,6 @@ ourWC=function(moveInfo,readings,positions,edges,probs) {
   if(!("destination"  %in% names(moveInfo$mem))){
     moveInfo$mem <- list(destination=list(pos=bestFiveNodes[1], prob=0), readings=0)
   }
-  
   moveInfo = hiddenMarkov(probability, edges, readings, moveInfo, bestFiveNodes, probs)
   moveInfo$mem$readings <- readings
   print("destination: ")
@@ -413,7 +382,7 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
 #' @param pause The pause period between moves. Ignore this.
 #' @return A string describing the outcome of the game.
 #' @export
-runWheresCroc=function(makeMoves=ourWC,showCroc=T,pause=1) {
+runWheresCroc=function(makeMoves=ourWC,showCroc=T,pause=2) {
   positions=sample(1:40,4) # Croc, BP1, BP2, Player
   points=getPoints()
   edges=getEdges()
