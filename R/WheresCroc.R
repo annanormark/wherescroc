@@ -269,9 +269,42 @@ z_score=function(readings, probs) {
   for(i in 1:40){
     z_list[i]=z_list[i]/sum_z
   }
-  print("z_list in z_score")
-  print(z_list)
+  #print("z_list in z_score")
+  #print(z_list)
   return(z_list)
+}
+
+
+
+hiddenMarkov = function(lastProbMatrix, transMatrix) {
+  productMatrix = lastprobMatrix %*% transMatrix
+  
+  sumMatrix = matrix(
+    nrow = 40,
+    ncol = 40
+  )
+  
+  obsMatrix = matrix(
+    nrow = 40,
+    ncol = 40
+  )
+  
+  for(i in 1:40){
+    obsMatrix[i,i] = dnorm(readings[1], probs$salinity[i,1], probs$salinity[i,2], FALSE) *
+      dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) *
+      dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
+    # 40 * 40 matrix with identitymatrix = obsMatrix
+  }
+  
+  for(i in 1:40){
+    sumMatrix[i,i] = sum(productMatrix[,i])
+  }
+  probMatrix = sumMatrix %*% obsMatrix
+  normalizedValue = 1/sum(probMatrix)
+  normalizedMatrix = probMatrix * normalizedValue
+  highestProbPos = row(normalizedMatrix)[which.max(normalizedMatrix)]
+  
+  return(highestProbPos, normalizedMatrix)
 }
 
 ourWC=function(moveInfo,readings,positions,edges,probs) {
