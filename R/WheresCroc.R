@@ -59,11 +59,27 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
   return(moveInfo)
 }
 
+trasitionMatrix=function(edges) {
+  transitionMatrix = matrix(
+    0, 
+    ncol = 40, 
+    nrow = 40
+  )
+  for(column in 1:40) {
+    neighbours = getOptions(column, edges)
+    for(row in neighbours) {
+      transitionMatrix[row][column] = 1/length(neighbours)
+    }
+  }
+  
+  return(transitionMatrix)
+}
+
 normalize = function(listOfNodes){
   print("*************************************")
   total = 0
   for(node in listOfNodes) {
-    total += node$prob
+    total = total + node$prob
     print(paste("in loop: ",total))
   }
   print(total)
@@ -144,7 +160,6 @@ hiddenMarkovNew=function(bestNodes, edges, readings, moveInfo,probs){
   }
   return(newDestination)
 }
-
 
 #Lukas
 bfs=function(node,dest,edges){
