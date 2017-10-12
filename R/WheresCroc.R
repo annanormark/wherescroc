@@ -5,8 +5,9 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
   lastReadings = moveInfo$mem$readings
   newDestination = list(pos = 0, prob = 0)
   probLastReadings = z_score(lastReadings, probs)
+  
   #from the best 5 nodes, run hidden markov
-  for(node in nrow(nodesProb)) {
+  for(node in topFiveNodes) {
     neighbours = getOptions(node, edges)
     nodeProb = nodesProb[node]
     neigbourlist = list()
@@ -14,7 +15,6 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
       if(neighbour != 0) {
         transferProb = 1/length(getOptions(neighbour, edges))
         n_prob <- as.numeric(transferProb * probLastReadings[neighbour] * nodeProb)
-        print(n_prob)
         if (!is.na(n_prob) && !identical(n_prob, numeric(0))) {
           neighbour_item = c(node = neighbour, prob = n_prob)
           c(neigbourlist, neighbour_item)
@@ -27,6 +27,7 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
       newDestination$prob = bestprob$prob
     }
   }
+  print("first normalization:")
   print(newDestination)
   prob = 0
   n_prob = 0
@@ -37,16 +38,14 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
       transferProb = 1/length(lastDestinationNeighbours)
       z_score = nodesProb[neighbour]
       n_prob = z_score * (transferProb * lastDestination$prob + ((1 - lastDestination$prob) * (1/(length(getOptions(neighbour, edges)) - 1)))) 
-      print(n_prob)
       if (!is.na(n_prob) && !identical(n_prob, numeric(0))) {
         neighbour_item <- list(node = neighbour, prob = n_prob)
         neighbourlist <- c(neighbourlist, list(neighbour_item))
       } 
     }
   }
-  print("efter loop")
-  print(neighbourlist)
   bestprob = normalize(neighbourlist)
+  print("second norm")
   print(bestprob)
   
   if (newDestination$prob < bestprob$prob) {
@@ -58,14 +57,37 @@ hiddenMarkov=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs)
   return(moveInfo)
 }
 
+trasitionMatrix=function(edges) {
+  transitionMatrix = matrix(
+    0, 
+    ncol = 40, 
+    nrow = 40
+  )
+  for(column in 1:40) {
+    neighbours = getOptions(column, edges)
+    for(row in neighbours) {
+      transitionMatrix[row][column] = 1/length(neighbours)
+    }
+  }
+  
+  return(transitionMatrix)
+}
+
 normalize = function(listOfNodes){
+  print("*************************************")
   total = 0
   for(node in listOfNodes) {
     total = total + node$prob
+    print(paste("in loop: ",total))
   }
+  print(total)
   bestprob = list(pos = 0, prob = 0)
+  print("in new loop")
   for(node in listOfNodes) {
+    print(node$prob)
     normalizedProb = node$prob/total
+    print(normalizedProb)
+    print("   ")
     if (normalizedProb > bestprob$prob) {
       bestprob$prob = normalizedProb
       bestprob$pos = node$node
@@ -127,7 +149,6 @@ hiddenMarkovNew=function(edges, readings, moveInfo,probs){
   moveInfo$mem$past_f = new_f_list
   return(moveInfo)
 }
-
 
 #Lukas
 bfs=function(node,dest,edges){
