@@ -178,7 +178,13 @@ deepHouseWC = function(moveInfo,readings,positions,edges,probs){
       init_f[i]=init_f[i]/sum_init
     }
     best_nodes = top_five(z_score_list)
-    best_node = best_nodes[1]
+    smallestDiff = 40
+    for(i in best_nodes){
+      if(abs(positions[3] - i) < smallestDiff) {
+        best_node = i
+        smallestDiff = abs(positions[3] - i)
+      }
+    }
     moveInfo$mem = list(destination=best_node,past_f=init_f) #init mem
   }
   if(tourist_eaten(positions[1])){
@@ -187,8 +193,8 @@ deepHouseWC = function(moveInfo,readings,positions,edges,probs){
     }
     init_f[abs(positions[1])]=1
     moveInfo$mem$past_f=init_f
-    print("eaten!")
-    print(abs(positions[1]))
+    #print("eaten!")
+    #print(abs(positions[1]))
   }
   if(tourist_eaten(positions[2])){
     for(i in 1:40){
@@ -196,8 +202,8 @@ deepHouseWC = function(moveInfo,readings,positions,edges,probs){
     }
     init_f[abs(positions[2])]=1
     moveInfo$mem$past_f=init_f
-    print("eaten at!")
-    print(abs(positions[2]))
+    #print("eaten at!")
+    #print(abs(positions[2]))
   }
   
   #end init mem
@@ -206,11 +212,11 @@ deepHouseWC = function(moveInfo,readings,positions,edges,probs){
 
   #update destination
   new_dest_node = moveInfo$mem$destination
-  print("new_dest_node")#print debug
-  print(new_dest_node)#print debug
+  
+  #print(paste("dest: ", new_dest_node))
+
   shortest_path = findShortestPath(positions[3],new_dest_node,edges)
-  print("shortest_path")#print debug
-  print(shortest_path)#print debug
+
   if(length(shortest_path) >= 3){
     moveInfo$moves = c(shortest_path[2],shortest_path[3])
   }
@@ -239,7 +245,7 @@ top_five=function(list){
   best_nodes = numeric()
   highestValue = 0
   valueIndex = 0
-  for(j in 1:5){
+  for(j in 1:10){
     for(i in 1:40){
       if(highestValue < list[i]){
         highestValue = list[i]
@@ -337,7 +343,7 @@ ourWC=function(moveInfo,readings,positions,edges,probs) {
     probMatrix = returnlist$probMatrix
     moveInfo$mem = probMatrix
   }
-  print(paste("dest: ", position))
+  #print(paste("dest: ", position))
   
   shortest_path = findShortestPath(positions[3], position, edges)
   if(length(shortest_path) >= 3){
@@ -414,9 +420,10 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
 averageTest <- function(tests){
   sum = 0
   for (i in 1:tests) {
-    sum=sum+runWheresCroc(makeMoves=ourWC,showCroc=F,pause=0)
+    sum=sum+runWheresCroc(makeMoves=deepHouseWC,showCroc=F,pause=0)
+    #sum=sum+runWheresCroc(makeMoves=ourWC,showCroc=F,pause=0)
     if(i%%10==0){
-      print(i)
+
       print(sum/i)
     }
   }
@@ -464,7 +471,7 @@ averageTest <- function(tests){
 #' @param pause The pause period between moves. Ignore this.
 #' @return A string describing the outcome of the game.
 #' @export
-runWheresCroc=function(makeMoves=ourWC,showCroc=T,pause=1) {
+runWheresCroc=function(makeMoves=deepHouseWC,showCroc=T,pause=1) {
   positions=sample(1:40,4) # Croc, BP1, BP2, Player
   points=getPoints()
   edges=getEdges()
@@ -474,6 +481,8 @@ runWheresCroc=function(makeMoves=ourWC,showCroc=T,pause=1) {
   while (!is.na(positions[1])) {
     move=move+1
     positions[1]=sample(getOptions(positions[1],edges),1)
+    
+   # print(paste("CrocPos: ", positions[1]))
     if (!is.na(positions[2])&&positions[2]>0) {
       positions[2]=sample(getOptions(positions[2],edges),1)
     } else if (!is.na(positions[2]) && positions[2]<0) {
