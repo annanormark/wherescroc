@@ -129,17 +129,23 @@ bfs=function(node,dest,edges){
   prev= numeric()
   prev[node]=-1
   current = node
-  while(length(open) != 0 && current != dest){
+  while(current != dest){
     current=head(open,n=1)#head
     visited=c(visited,c(current))
     open =setdiff(open,c(current))#dequeue
     neigh = getOptions(current,edges)#get children
     neigh= setdiff(neigh,c(current))
     neigh = setdiff(neigh,visited)
-    for(n in neigh){
-      open=c(open,n)
-      prev[n]=current
-    }  
+    if(dest %in% neigh){
+      prev[dest]=current
+      current=dest
+    }
+    else{
+      for(n in neigh){
+        open=c(open,n)
+        prev[n]=current
+      }
+    }
   }
   return(prev)
 }
@@ -158,10 +164,12 @@ findShortestPath=function(point,dest,edges){
 }
 
 deepHouseWC = function(moveInfo,readings,positions,edges,probs){
+  #init mem
+  init_f=numeric()
   if(!("destination"  %in% names(moveInfo$mem))){
-    #init mem
+    #init z_score
     z_score_list=z_score(readings,probs)
-    init_f=numeric()
+    #init f_list
     for(i in 1:40){
       init_f[i]=(1/40)*z_score_list[i]
     }
@@ -173,14 +181,33 @@ deepHouseWC = function(moveInfo,readings,positions,edges,probs){
     best_node = best_nodes[1]
     moveInfo$mem = list(destination=best_node,past_f=init_f) #init mem
   }
+  if(tourist_eaten(positions[1])){
+    for(i in 1:40){
+      init_f[i]=0
+    }
+    init_f[abs(positions[1])]=1
+    moveInfo$mem$past_f=init_f
+    print("eaten!")
+    print(abs(positions[1]))
+  }
+  if(tourist_eaten(positions[2])){
+    for(i in 1:40){
+      init_f[i]=0
+    }
+    init_f[abs(positions[2])]=1
+    moveInfo$mem$past_f=init_f
+    print("eaten at!")
+    print(abs(positions[2]))
+  }
+  
   #end init mem
   #perform HM, save new destinaion and past f in markovData
-  moveInfo = hiddenMarkovNew(edges, readings,moveInfo,probs)
-  
+  moveInfo = hiddenMarkovNew(edges,readings,moveInfo,probs)
+
+  #update destination
   new_dest_node = moveInfo$mem$destination
   print("new_dest_node")#print debug
   print(new_dest_node)#print debug
-  Sys.sleep(2)
   shortest_path = findShortestPath(positions[3],new_dest_node,edges)
   print("shortest_path")#print debug
   print(shortest_path)#print debug
@@ -192,15 +219,17 @@ deepHouseWC = function(moveInfo,readings,positions,edges,probs){
   }
   neigh = getOptions(positions[3],edges)
   if(new_dest_node %in% neigh){
-    print("CROC IS NEAR! GET OUT OF THE WATER!")
+    #print("CROC IS NEAR! GET OUT OF THE WATER!")
     moveInfo$moves = c(new_dest_node,0)
   }
   if(length(shortest_path) == 1){
-    print("random")
-    moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
+    #print("check for croc twice")
+    moveInfo$moves=c(0,0)  
   }
-  print("steps taken:")
-  print(moveInfo$moves)
+  #print("steps taken:")
+  #print(moveInfo$moves)
+  #print("*********")#print debug
+  
   return(moveInfo)
 }
 
@@ -332,7 +361,6 @@ tourist_eaten = function(turist_point){
   }
 }
 
-
 prob_edge_movement = function(point,edges){
   options=getOptions(point,edges)
   div_arg = length(options)
@@ -383,6 +411,18 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
   return(moveInfo)
 }
 
+averageTest <- function(tests){
+  sum = 0
+  for (i in 1:tests) {
+    sum=sum+runWheresCroc(makeMoves=ourWC,showCroc=F,pause=0)
+    if(i%%10==0){
+      print(i)
+      print(sum/i)
+    }
+  }
+  print(sum/i)
+  return(0)
+}
 
 #' Run Where's Croc
 #' 
