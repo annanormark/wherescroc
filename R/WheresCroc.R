@@ -73,7 +73,9 @@ getTransitionMatrix=function(edges) {
   return(transitionMatrix)
 }
 
+
 #Jones och LullPatrull
+#deepHouse needs this
 return_node_with_highest_f=function(f_list){
   highestValue = -100000
   valueIndex = 1
@@ -88,6 +90,7 @@ return_node_with_highest_f=function(f_list){
 }
 
 #Jones och LullPatrull
+#deepHouse needs this
 generate_new_f = function(node,current_z_scores,past_f_list,edges){
   neighbours=getOptions(node,edges)
   new_f=0
@@ -101,6 +104,7 @@ generate_new_f = function(node,current_z_scores,past_f_list,edges){
 
 
 #Jones och LullPatrull
+#deepHouse needs this
 hiddenMarkovNew=function(edges, readings, moveInfo,probs){
   past_destination = moveInfo$mem$destination
   past_f_list = moveInfo$mem$past_f
@@ -122,7 +126,9 @@ hiddenMarkovNew=function(edges, readings, moveInfo,probs){
   return(moveInfo)
 }
 
+
 #Lukas
+#deepHouse needs this
 bfs=function(node,dest,edges){
   visited = c(node)#added prevnode!
   open = c(node)
@@ -149,7 +155,9 @@ bfs=function(node,dest,edges){
   }
   return(prev)
 }
+
 #Lukas
+#deepHouse needs this
 findShortestPath=function(point,dest,edges){
   prev_list = bfs(point,dest,edges)
   shortest_path = c(dest)
@@ -163,6 +171,7 @@ findShortestPath=function(point,dest,edges){
   return(shortest_path)
 }
 
+#deepHouse needs this to exist
 deepHouseWC = function(moveInfo,readings,positions,edges,probs){
   #init mem
   init_f=numeric()
@@ -233,8 +242,9 @@ deepHouseWC = function(moveInfo,readings,positions,edges,probs){
   return(moveInfo)
 }
 
+
 #Jonas
-#checka dnorm, verkar g??ra detta ganska l??tt! /M&A
+#deepHouse needs this
 top_five=function(list){
   best_nodes = numeric()
   highestValue = 0
@@ -252,6 +262,8 @@ top_five=function(list){
   }
   return(best_nodes)
 }
+
+#deepHouse needs this
 #Jonas
 z_score=function(readings, probs) {
   A = matrix(
@@ -352,6 +364,7 @@ ourWC=function(moveInfo,readings,positions,edges,probs) {
   return(moveInfo)
 }
 
+#deepHouse needs this
 tourist_eaten = function(turist_point){
   if(!is.na(turist_point) && turist_point < 0){
     return(TRUE)
@@ -361,12 +374,27 @@ tourist_eaten = function(turist_point){
   }
 }
 
+#deepHouse needs this
 prob_edge_movement = function(point,edges){
   options=getOptions(point,edges)
   div_arg = length(options)
   prob = 1/div_arg
   return(prob)
 }
+
+averageTest <- function(tests){
+  sum = 0
+  for (i in 1:tests) {
+    sum=sum+runWheresCroc(makeMoves=ourWC,showCroc=F,pause=0)
+    if(i%%10==0){
+      print(i)
+      print(sum/i)
+    }
+  }
+  print(sum/i)
+  return(0)
+}
+
 
 #__________________________________________OUR CODE END HERE_____________________________________________________________
 
@@ -409,19 +437,6 @@ manualWC=function(moveInfo,readings,positions,edges,probs) {
   }
   moveInfo$moves=c(mv1,mv2)
   return(moveInfo)
-}
-
-averageTest <- function(tests){
-  sum = 0
-  for (i in 1:tests) {
-    sum=sum+runWheresCroc(makeMoves=ourWC,showCroc=F,pause=0)
-    if(i%%10==0){
-      print(i)
-      print(sum/i)
-    }
-  }
-  print(sum/i)
-  return(0)
 }
 
 #' Run Where's Croc
