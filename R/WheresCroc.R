@@ -1,81 +1,5 @@
-
-#Anna och Marcus
-hiddenMarkovX=function(nodesProb, edges, readings, moveInfo, topFiveNodes, probs){
-  lastDestination = moveInfo$mem$destination
-  lastReadings = moveInfo$mem$readings
-  newDestination = list(pos = 0, prob = 0)
-  probLastReadings = z_score(lastReadings, probs)
-  
-  #from the best 5 nodes, run hidden markov
-  for(node in topFiveNodes) {
-    neighbours = getOptions(node, edges)
-    nodeProb = nodesProb[node]
-    neigbourlist = list()
-    for(neighbour in neighbours) {
-      if(neighbour != 0) {
-        transferProb = 1/length(getOptions(neighbour, edges))
-        n_prob <- as.numeric(transferProb * probLastReadings[neighbour] * nodeProb)
-        if (!is.na(n_prob) && !identical(n_prob, numeric(0))) {
-          neighbour_item = c(node = neighbour, prob = n_prob)
-          c(neigbourlist, neighbour_item)
-        } 
-      }
-    }
-    bestprob = normalize(neigbourlist)
-    if (newDestination$prob < bestprob$prob) {
-      newDestination$pos = node
-      newDestination$prob = bestprob$prob
-    }
-  }
-  print("first normalization:")
-  print(newDestination)
-  prob = 0
-  n_prob = 0
-  lastDestinationNeighbours = getOptions(lastDestination, edges)
-  neighbourlist = list()
-  for(neighbour in lastDestinationNeighbours) {
-    if(neighbour != 0) {
-      transferProb = 1/length(lastDestinationNeighbours)
-      z_score = nodesProb[neighbour]
-      n_prob = z_score * (transferProb * lastDestination$prob + ((1 - lastDestination$prob) * (1/(length(getOptions(neighbour, edges)) - 1)))) 
-      if (!is.na(n_prob) && !identical(n_prob, numeric(0))) {
-        neighbour_item <- list(node = neighbour, prob = n_prob)
-        neighbourlist <- c(neighbourlist, list(neighbour_item))
-      } 
-    }
-  }
-  bestprob = normalize(neighbourlist)
-  print("second norm")
-  print(bestprob)
-  
-  if (newDestination$prob < bestprob$prob) {
-    newDestination$pos = bestprob$pos
-    newDestination$prob = bestprob$prob
-  }
-  moveInfo$mem$destination <- newDestination
-  print(newDestination)
-  return(moveInfo)
-}
-
-getTransitionMatrix=function(edges) {
-  transitionMatrix = matrix(
-    0, 
-    ncol = 40, 
-    nrow = 40
-  )
-  for(column in 1:40) {
-    neighbours = getOptions(column, edges)
-    for(row in neighbours) {
-      prob = 1/length(neighbours)
-      transitionMatrix[row, column] = prob
-    }
-  }
-  return(transitionMatrix)
-}
-
-
-#Jones och LullPatrull
-#deepHouse needs this
+#' return_node_with_highest_f
+#' Returns the node with highest f value.
 return_node_with_highest_f=function(f_list){
   highestValue = -100000
   valueIndex = 1
@@ -89,79 +13,81 @@ return_node_with_highest_f=function(f_list){
   return(best_node)
 }
 
-#Jones och LullPatrull
-#deepHouse needs this
-generate_new_f = function(node,current_z_scores,past_f_list,edges){
+#' generate_new_f
+#' Performs a forward algorithm calculation for a given node, returning
+#' the current probability.
+generate_new_f = function(node,current_density_scores,past_f_list,edges){
   neighbours=getOptions(node,edges)
   new_f=0
   for(neigh in neighbours){
-    new_f = new_f + (past_f_list[neigh]*prob_edge_movement(node,edges)) 
+    new_f = new_f + (past_f_list[neigh]*transition_prob(neigh,edges)) 
   }
-  new_f=new_f*current_z_scores[node]
-  
+  new_f=new_f*current_density_scores[node]
   return(new_f)
 }
 
-
-#Jones och LullPatrull
-#deepHouse needs this
-hiddenMarkovNew=function(edges, readings, moveInfo,probs){
-  past_destination = moveInfo$mem$destination
+#' @param hiddenMarkov
+#' Performs one iteration of a hidden markov sequence calculation 
+#' using the forward algorithm, returning the node with the highest probability
+#' within the current sequence of steps.
+hiddenMarkov=function(edges, readings, moveInfo,probs){
+  #retrieve past f values
   past_f_list = moveInfo$mem$past_f
-  current_z_scores = z_score(readings,probs)
+  #get new normalized probability density list
+  current_density_scores = normalized_dnorm_list(readings,probs)
+  #update f values for all nodes
   new_f_list=numeric()  
   for(node in 1:40){
-    new_f_list[node] = generate_new_f(node,current_z_scores,past_f_list,edges)
+    new_f_list[node] = generate_new_f(node,current_density_scores,past_f_list,edges)
   }
+  #normalize new_f_list
   f_sum=sum(new_f_list,na.rm=TRUE)
   for(node in 1:40){
     new_f_list[node]= new_f_list[node]/f_sum
   }
   #pick node with highest f
-  #print("new_f_list")
-  #print(new_f_list)
   new_dest = return_node_with_highest_f(new_f_list)
+  #update moveInfo
   moveInfo$mem$destination = new_dest
   moveInfo$mem$past_f = new_f_list
   return(moveInfo)
 }
 
-
-#Lukas
-#deepHouse needs this
+#' bfs
+#' Performs bfs and returns a numerical vector prev representing the
+#' parent/child relationship of nodes encountered during the bfs search.
+#' For a child node A, prev[node] will return its parent node B.
 bfs=function(node,dest,edges){
-  visited = c(node)#added prevnode!
+  visited = c(node)
   open = c(node)
   prev= numeric()
   prev[node]=-1
   current = node
-  while(current != dest){
+  while(length(open) != 0){
     current=head(open,n=1)#head
-    visited=c(visited,c(current))
-    open =setdiff(open,c(current))#dequeue
+    open =setdiff(open,c(current))#dequeue head
     neigh = getOptions(current,edges)#get children
-    neigh= setdiff(neigh,c(current))
-    neigh = setdiff(neigh,visited)
-    if(dest %in% neigh){
-      prev[dest]=current
-      current=dest
-    }
-    else{
-      for(n in neigh){
-        open=c(open,n)
-        prev[n]=current
+    neigh= setdiff(neigh,c(current))#remove current from children
+    neigh = setdiff(neigh,visited)#remove nodes already visited from niegh
+    for(n in neigh){#for each unvisited neighbour of current
+      if(!(n %in% visited)){#if n not in visited
+        open=c(open,n)#queue n in open
+        prev[n]=current#set current as parent node to n
+        visited=c(visited,c(n))#append n in visited
       }
     }
   }
   return(prev)
 }
 
-#Lukas
-#deepHouse needs this
+#' findShortestPath
+#' Performs bfs and returns a numerical vector
+#' of nodes representing the shortest path from point to dest.
 findShortestPath=function(point,dest,edges){
   prev_list = bfs(point,dest,edges)
   shortest_path = c(dest)
   current=dest
+  #iterate through prev_list to from child to parent until no parents remain
   while(current != -1){
     if(prev_list[current] != -1){
       shortest_path= c(prev_list[current],shortest_path)
@@ -171,87 +97,10 @@ findShortestPath=function(point,dest,edges){
   return(shortest_path)
 }
 
-#deepHouse needs this to exist
-deepHouseWC = function(moveInfo,readings,positions,edges,probs){
-  #init mem
-  init_f=numeric()
-  if(!("destination"  %in% names(moveInfo$mem))){
-    #init z_score
-    z_score_list=z_score(readings,probs)
-    #init f_list
-    for(i in 1:40){
-      init_f[i]=(1/40)*z_score_list[i]
-    }
-    sum_init = sum(init_f)
-    for(i in 1:40){
-      init_f[i]=init_f[i]/sum_init
-    }
-    best_nodes = top_five(z_score_list)
-    smallestDiff = 40
-    for(i in best_nodes){
-      if(abs(positions[3] - i) < smallestDiff) {
-        best_node = i
-        smallestDiff = abs(positions[3] - i)
-      }
-    }
-    moveInfo$mem = list(destination=best_node,past_f=init_f) #init mem
-  }
-  if(tourist_eaten(positions[1])){
-    for(i in 1:40){
-      init_f[i]=0
-    }
-    init_f[abs(positions[1])]=1
-    moveInfo$mem$past_f=init_f
-    #print("eaten!")
-    #print(abs(positions[1]))
-  }
-  if(tourist_eaten(positions[2])){
-    for(i in 1:40){
-      init_f[i]=0
-    }
-    init_f[abs(positions[2])]=1
-    moveInfo$mem$past_f=init_f
-    #print("eaten at!")
-    #print(abs(positions[2]))
-  }
-  
-  #end init mem
-  #perform HM, save new destinaion and past f in markovData
-  moveInfo = hiddenMarkovNew(edges,readings,moveInfo,probs)
-
-  #update destination
-  new_dest_node = moveInfo$mem$destination
-  
-  #print(paste("dest: ", new_dest_node))
-
-  shortest_path = findShortestPath(positions[3],new_dest_node,edges)
-
-  if(length(shortest_path) >= 3){
-    moveInfo$moves = c(shortest_path[2],shortest_path[3])
-  }
-  if(length(shortest_path) == 2){
-    moveInfo$moves = c(shortest_path[2],0)
-  }
-  neigh = getOptions(positions[3],edges)
-  if(new_dest_node %in% neigh){
-    #print("CROC IS NEAR! GET OUT OF THE WATER!")
-    moveInfo$moves = c(new_dest_node,0)
-  }
-  if(length(shortest_path) == 1){
-    #print("check for croc twice")
-    moveInfo$moves=c(0,0)  
-  }
-  #print("steps taken:")
-  #print(moveInfo$moves)
-  #print("*********")#print debug
-  
-  return(moveInfo)
-}
-
-
-#Jonas
-#deepHouse needs this
-top_five=function(list){
+#' highest_prob_nodes
+#' Returns a numerical vector representing the ten nodes having the 
+#' highest probability density values.
+highest_prob_nodes=function(list){
   best_nodes = numeric()
   highestValue = 0
   valueIndex = 0
@@ -269,108 +118,33 @@ top_five=function(list){
   return(best_nodes)
 }
 
-#deepHouse needs this
-#Jonas
-z_score=function(readings, probs) {
+#' normalized_dnorm_list
+#' Returns a numerical vector containing the normalized
+#' probability density values from the readings made by the croc.
+normalized_dnorm_list=function(readings, probs) {
   A = matrix(
     nrow = 40,
     ncol = 3
   )
-  z_list = numeric()
+  #save dnom results in matrix A and multiply all column values
+  dnorm_list = numeric()
   for(i in 1:40){
     A[i,1] = dnorm(readings[1], probs$salinity[i,1], probs$salinity[i,2], FALSE)
     A[i,2] = dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) 
     A[i,3] = dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
-    z_list[i] = A[i,1] * A[i,2] * A[i,3]  # Multiplicerar varje rad och l'gger i z_list, 40 element totalt
-    #z_list[i] = A[i,1] + A[i,2] + A[i,3]  # Multiplicerar varje rad och l'gger i z_list, 40 element totalt
+    dnorm_list[i] = A[i,1] * A[i,2] * A[i,3]
   }
-  sum_z = sum(z_list)
+  #normalize dnorm_list
+  sum_z = sum(dnorm_list)
   for(i in 1:40){
-    z_list[i]=z_list[i]/sum_z
+    dnorm_list[i]=dnorm_list[i]/sum_z
   }
-  #print("z_list in z_score")
-  #print(z_list)
-  return(z_list)
+  return(dnorm_list)
 }
 
-hiddenMarkov = function(lastProbMatrix, edges, readings, probs) {
-  transMatrix = getTransitionMatrix(edges)
-  productMatrix = lastProbMatrix %*% transMatrix
-  
-  sumMatrix = matrix(
-    data = 0,
-    nrow = 40,
-    ncol = 40
-  )
-  
-  obsMatrix = matrix(
-    data = 0,
-    nrow = 40,
-    ncol = 40
-  )
-  
-  for(i in 1:40){
-    obsMatrix[i,i] = dnorm(readings[1], probs$salinity[i,1], probs$salinity[i,2], FALSE) *
-     dnorm(readings[2], probs$phosphate[i,1], probs$phosphate[i,2], FALSE) *
-     dnorm(readings[3], probs$nitrogen[i,1], probs$nitrogen[i,2], FALSE)
-    # 40 * 40 matrix with identitymatrix = obsMatrix
-  }
-
-  for(i in 1:40){
-    sumMatrix[i,i] = sum(productMatrix[,i])
-  }
-  probMatrix = sumMatrix %*% obsMatrix
-
-  normalizedValue = 1/sum(probMatrix)
-  normalizedMatrix = probMatrix * normalizedValue
-  highestProbPos = row(normalizedMatrix)[which.max(normalizedMatrix)]
-
-  returnlist = list(position = highestProbPos, probMatrix = normalizedMatrix)
-  return(returnlist)
-}
-
-ourWC=function(moveInfo,readings,positions,edges,probs) {
-  if(length(moveInfo$mem) <= 0) {
-    moveInfo$mem = matrix(
-      data = 0,
-      nrow = 40,
-      ncol = 40
-    )
-    for(i in 1:40) {
-      moveInfo$mem[i,i] = 1/40
-    }
-  }
-  position = 0
-  if(tourist_eaten(positions[1])) {
-    position = abs(positions[1])
-    probMatrix = matrix(nrow = 40, ncol = 40)
-    probMatrix[position, position] = 1
-  } else if(tourist_eaten(positions[2])) {
-    position = abs(positions[2])
-    probMatrix = matrix(nrow = 40, ncol = 40)
-    probMatrix[position, position] = 1
-  } else {
-    returnlist = hiddenMarkov(moveInfo$mem, edges, readings, probs)
-    position = returnlist$position
-    probMatrix = returnlist$probMatrix
-    moveInfo$mem = probMatrix
-  }
-  #print(paste("dest: ", position))
-  
-  shortest_path = findShortestPath(positions[3], position, edges)
-  if(length(shortest_path) >= 3){
-    moveInfo$moves = c(shortest_path[2],shortest_path[3])
-  }
-  else if(length(shortest_path) == 2){
-    moveInfo$moves = c(shortest_path[2],0)
-  }
-  else{
-    moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
-  }
-  return(moveInfo)
-}
-
-#deepHouse needs this
+#' tourist_eaten
+#' If tourist has been eaten then return true, 
+#' else return false.
 tourist_eaten = function(turist_point){
   if(!is.na(turist_point) && turist_point < 0){
     return(TRUE)
@@ -380,18 +154,93 @@ tourist_eaten = function(turist_point){
   }
 }
 
-#deepHouse needs this
-prob_edge_movement = function(point,edges){
-  options=getOptions(point,edges)
+#' transition_prob
+#' Return the transition probability for a specific node.
+transition_prob = function(node,edges){
+  options=getOptions(node,edges)
   div_arg = length(options)
   prob = 1/div_arg
   return(prob)
 }
+#' deepHouseWC
+#' Performs a combination of the hidden markov forward algorithm and bfs search
+#' to find the croc in as few moves as possible.
+deepHouseWC = function(moveInfo,readings,positions,edges,probs){
 
+  #init moveInfo$mem
+  init_f=numeric()
+  if(!("destination"  %in% names(moveInfo$mem))){
+    #init density_score_list
+    density_score_list=normalized_dnorm_list(readings,probs)
+    #init f_list with initial probabilitys
+    for(i in 1:40){
+      init_f[i]=(1/40)*density_score_list[i]
+    }
+    #normalize init_f
+    sum_init = sum(init_f)
+    for(i in 1:40){
+      init_f[i]=init_f[i]/sum_init
+    }
+    #select initial destination node 
+    best_nodes = highest_prob_nodes(density_score_list)
+    best_node=best_nodes[1]
+    moveInfo$mem = list(destination=best_node,past_f=init_f) #init mem
+  }
+  
+  #if tourist A eaten, set all f_values to zero, and then set f_value for tourist A to 1
+  if(tourist_eaten(positions[1])){
+    for(i in 1:40){
+      init_f[i]=0
+    }
+    init_f[abs(positions[1])]=1
+    moveInfo$mem$past_f=init_f
+  }
+  
+  #if tourist B eaten, set all f_values to zero, and then set f_value for tourist B to 1
+  if(tourist_eaten(positions[2])){
+    for(i in 1:40){
+      init_f[i]=0
+    }
+    init_f[abs(positions[2])]=1
+    moveInfo$mem$past_f=init_f
+  }
+
+  #perform HM, save new destinaion and past f values in moveInfo
+  moveInfo = hiddenMarkov(edges,readings,moveInfo,probs)
+  
+  #update destination and pick shortest path
+  new_dest_node = moveInfo$mem$destination
+  shortest_path = findShortestPath(positions[3],new_dest_node,edges)
+
+  #two steps away or more from destination
+  if(length(shortest_path) >= 3){
+    moveInfo$moves = c(shortest_path[2],shortest_path[3])
+  }
+  
+  #one step away from destination
+  if(length(shortest_path) == 2){
+    moveInfo$moves = c(shortest_path[2],0)
+  }
+  
+  #if destination amoung neighbours, go to neighbour
+  neigh = getOptions(positions[3],edges)
+  if(new_dest_node %in% neigh){
+    moveInfo$moves = c(new_dest_node,0)
+  }
+  
+  #if at destination: dont move, just check for croc
+  if(length(shortest_path) == 1){
+    moveInfo$moves=c(0,0)  
+  }
+  return(moveInfo)
+}
+
+#' averageTest
+#' Used for testing
 averageTest <- function(tests){
   sum = 0
   for (i in 1:tests) {
-    sum=sum+runWheresCroc(makeMoves=ourWC,showCroc=F,pause=0)
+    sum=sum+runWheresCroc(makeMoves=deepHouseWC,showCroc=F,pause=0)
     if(i%%10==0){
       print(i)
       print(sum/i)
@@ -402,20 +251,11 @@ averageTest <- function(tests){
 }
 
 
-#__________________________________________OUR CODE END HERE_____________________________________________________________
+#__________________________________________OUR CODE ENDS HERE_____________________________________________________________
 
 #' @export
 randomWC=function(moveInfo,readings,positions,edges,probs) {
   moveInfo$moves=c(sample(getOptions(positions[3],edges),1),0)  
-  #print(moveInfo)
-  #print(readings)
-  #print(positions)
-  #print(edges)
-  #rint(probs)
-  #rint(A)
-  #rint(readings)
-  #print("croc at: ")
-  top_five(z_score(readings, probs))
   return(moveInfo)
 }
 
